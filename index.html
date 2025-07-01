@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Catálogo de Produtos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+    }
+
+    header {
+      background: #333;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .filtros {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1rem;
+      background: #fff;
+      justify-content: center;
+    }
+
+    .filtros input,
+    .filtros select {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .catalogo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      padding: 2rem;
+    }
+
+    .produto {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .produto img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+    }
+
+    .produto h2 {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+    }
+
+    .produto .preco {
+      font-weight: bold;
+      color: #009688;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background: #333;
+      color: white;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Catálogo de Produtos</h1>
+</header>
+
+<section class="filtros">
+  <input type="text" id="busca" placeholder="Buscar por nome..." />
+  <select id="categoria">
+    <option value="">Todas as categorias</option>
+    <option value="Eletrônicos">Eletrônicos</option>
+    <option value="Roupas">Roupas</option>
+    <option value="Livros">Livros</option>
+  </select>
+  <select id="preco">
+    <option value="">Todos os preços</option>
+    <option value="0-100">Até R$ 100</option>
+    <option value="100-200">R$ 100 a R$ 200</option>
+    <option value="200-9999">Acima de R$ 200</option>
+  </select>
+</section>
+
+<section class="catalogo" id="catalogo">
+  <!-- Produtos serão inseridos aqui via JavaScript -->
+</section>
+
+<footer>
+  <p>&copy; 2025 Catálogo de Produtos</p>
+</footer>
+
+<script>
+  const produtos = [
+    { nome: "Smartphone X", categoria: "Eletrônicos", preco: 1999.90, imagem: "https://via.placeholder.com/250x200" },
+    { nome: "Camisa Polo", categoria: "Roupas", preco: 89.90, imagem: "https://via.placeholder.com/250x200" },
+    { nome: "Livro de JavaScript", categoria: "Livros", preco: 59.90, imagem: "https://via.placeholder.com/250x200" },
+    { nome: "Fone Bluetooth", categoria: "Eletrônicos", preco: 149.90, imagem: "https://via.placeholder.com/250x200" },
+    { nome: "Calça Jeans", categoria: "Roupas", preco: 129.90, imagem: "https://via.placeholder.com/250x200" },
+    { nome: "Notebook Ultra", categoria: "Eletrônicos", preco: 2999.90, imagem: "https://via.placeholder.com/250x200" }
+  ];
+
+  const catalogoEl = document.getElementById("catalogo");
+  const buscaEl = document.getElementById("busca");
+  const categoriaEl = document.getElementById("categoria");
+  const precoEl = document.getElementById("preco");
+
+  function renderProdutos(lista) {
+    catalogoEl.innerHTML = "";
+    if (lista.length === 0) {
+      catalogoEl.innerHTML = "<p>Nenhum produto encontrado.</p>";
+      return;
+    }
+
+    lista.forEach(produto => {
+      const div = document.createElement("div");
+      div.className = "produto";
+      div.innerHTML = `
+        <img src="${produto.imagem}" alt="${produto.nome}">
+        <h2>${produto.nome}</h2>
+        <p>${produto.categoria}</p>
+        <div class="preco">R$ ${produto.preco.toFixed(2)}</div>
+      `;
+      catalogoEl.appendChild(div);
+    });
+  }
+
+  function filtrar() {
+    const busca = buscaEl.value.toLowerCase();
+    const categoria = categoriaEl.value;
+    const preco = precoEl.value;
+
+    let filtrados = produtos.filter(p => 
+      p.nome.toLowerCase().includes(busca) &&
+      (categoria === "" || p.categoria === categoria)
+    );
+
+    if (preco !== "") {
+      const [min, max] = preco.split("-").map(Number);
+      filtrados = filtrados.filter(p => p.preco >= min && p.preco <= max);
+    }
+
+    renderProdutos(filtrados);
+  }
+
+  buscaEl.addEventListener("input", filtrar);
+  categoriaEl.addEventListener("change", filtrar);
+  precoEl.addEventListener("change", filtrar);
+
+  // Inicializa
+  renderProdutos(produtos);
+</script>
+
+</body>
+</html>
