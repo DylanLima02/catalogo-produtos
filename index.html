@@ -3,133 +3,67 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Catálogo Dinâmico</title>
+  <title>Catálogo Dinâmico - Debug</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
-    header { background: #333; color: #fff; padding: 1rem; text-align: center; }
-    .filtros { display: flex; justify-content: center; gap: 1rem; padding: 1rem; background: #fff; flex-wrap: wrap; }
-    .filtros input, .filtros select { padding: 0.5rem; font-size: 1rem; }
-    .catalogo { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; padding: 2rem; }
-    .produto { background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); transition: transform .2s; }
-    .produto:hover { transform: scale(1.02); }
-    .produto a { display: block; text-decoration: none; color: inherit; padding: 1rem; }
-    .produto img { max-width: 100%; border-radius: 5px; height: 200px; object-fit: cover; }
-    .produto h2 { margin: 0.5rem 0; font-size: 1.2rem; }
-    .produto .preco { color: #009688; font-weight: bold; }
-    footer { text-align: center; padding: 1rem; background: #333; color: #fff; margin-top: 2rem; }
-    .mensagem { text-align: center; margin-top: 2rem; font-size: 1.2rem; color: #666; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .mensagem { text-align: center; margin: 2rem; font-size: 1.2rem; color: #333; }
   </style>
 </head>
 <body>
+  <h1 style="text-align:center;">Teste de Debug do Catálogo</h1>
+  <div id="mensagem" class="mensagem">Iniciando...</div>
+  <pre id="debug" style="white-space: pre-wrap; margin: 1rem; background: #eee; padding: 1rem;"></pre>
 
-<header><h1>Catálogo Dinâmico</h1></header>
+  <script>
+    const debugEl = document.getElementById('debug');
+    const mensagemEl = document.getElementById('mensagem');
 
-<section class="filtros">
-  <input id="busca" type="text" placeholder="Buscar por nome...">
-  <select id="categoria">
-    <option value="">Todas categorias</option>
-  </select>
-  <select id="preco">
-    <option value="">Todos os preços</option>
-    <option value="0-100">Até R$100</option>
-    <option value="100-200">R$100 a R$200</option>
-    <option value="200-9999">Acima de R$200</option>
-  </select>
-</section>
+    function logDebug(msg) {
+      console.log(msg);
+      debugEl.textContent += msg + "\n";
+    }
 
-<section id="catalogo" class="catalogo"></section>
-<div id="mensagem" class="mensagem">Carregando produtos...</div>
-<footer>&copy; 2025 Catálogo Dinâmico</footer>
+    const spreadsheetId = '1yJqq-aL5oUnBtxb93bJy2JwLx3ccwuaoQz_UbHAI5_s';
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json`;
 
-<script>
-  const spreadsheetId = '1yJqq-aL5oUnBtxb93bJy2JwLx3ccwuaoQz_UbHAI5_s';
-  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json`;
+    logDebug("🔍 URL de fetch: " + url);
+    mensagemEl.textContent = "Buscando planilha...";
 
-  let produtos = [];
+    fetch(url)
+      .then(res => {
+        logDebug("Status da resposta: " + res.status + " " + res.statusText);
+        return res.text();
+      })
+      .then(txt => {
+        logDebug("👍 Recebeu resposta de texto. Tamanho: " + txt.length + " caracteres");
+        const match = txt.match(/(?<=\().*(?=\);)/s);
+        if (!match) throw new Error("⚠️ Formato inesperado no JSON recebido");
+        logDebug("💡 JSON detectado dentro do texto.");
+        const json = JSON.parse(match[0]);
+        logDebug("🎯 JSON.parse executado com sucesso.");
+        logDebug("Colunas encontradas: " + JSON.stringify(json.table.cols.map(c => c.label)));
+        logDebug("Linhas recebidas: " + json.table.rows.length);
 
-  const catalogoEl = document.getElementById("catalogo");
-  const buscaEl = document.getElementById("busca");
-  const categoriaEl = document.getElementById("categoria");
-  const precoEl = document.getElementById("preco");
-  const mensagemEl = document.getElementById("mensagem");
-
-  fetch(url)
-    .then(res => res.text())
-    .then(txt => {
-      const json = JSON.parse(txt.match(/(?<=\().*(?=\);)/s)[0]);
-
-      const cols = json.table.cols.map(c => c.label.toLowerCase());
-      if (!cols.includes("nome") || !cols.includes("preco")) {
-        mensagemEl.textContent = "⚠️ Colunas obrigatórias não encontradas na planilha.";
-        throw new Error("Colunas ausentes");
-      }
-
-      produtos = json.table.rows
-        .filter(r => r.c.length >= 5)
-        .map(r => {
-          return r.c.reduce((o, cell, i) => {
-            o[cols[i]] = cell?.v || '';
+        const cols = json.table.cols.map(c => c.label.toLowerCase());
+        const rows = json.table.rows;
+        const produtos = rows.map(r => {
+          return cols.reduce((o, colName, i) => {
+            o[colName] = r.c[i]?.v || '';
             return o;
           }, {});
         });
+        logDebug("Produtos mapeados: " + JSON.stringify(produtos, null, 2));
 
-      if (!produtos.length) {
-        mensagemEl.textContent = "Nenhum produto encontrado.";
-        return;
-      }
-
-      mensagemEl.style.display = "none";
-      populaCategorias();
-      renderProdutos(produtos);
-    })
-    .catch(err => {
-      console.error("Erro ao carregar planilha:", err);
-      mensagemEl.textContent = "Erro ao carregar produtos. Verifique a planilha e tente novamente.";
-    });
-
-  function populaCategorias() {
-    const cats = [...new Set(produtos.map(p => p.categoria))].filter(Boolean);
-    cats.forEach(cat => {
-      const op = document.createElement('option');
-      op.value = op.textContent = cat;
-      categoriaEl.append(op);
-    });
-  }
-
-  function renderProdutos(lista) {
-    catalogoEl.innerHTML = lista.length
-      ? lista.map(p => `
-        <div class="produto">
-          <a href="${p.link || '#'}" target="_blank">
-            <img src="${p.imagem || 'https://via.placeholder.com/300x200?text=Sem+Imagem'}" alt="${p.nome}">
-            <h2>${p.nome}</h2>
-            <p>${p.categoria || 'Sem categoria'}</p>
-            <div class="preco">R$ ${Number(p.preco).toFixed(2)}</div>
-          </a>
-        </div>
-      `).join('')
-      : '<p style="text-align:center;">Nenhum produto encontrado.</p>';
-  }
-
-  function filtrar() {
-    const b = buscaEl.value.toLowerCase();
-    const c = categoriaEl.value;
-    const pr = precoEl.value;
-    let f = produtos.filter(p =>
-      p.nome.toLowerCase().includes(b) &&
-      (c === '' || p.categoria === c)
-    );
-    if (pr) {
-      const [min, max] = pr.split('-').map(Number);
-      f = f.filter(p => Number(p.preco) >= min && Number(p.preco) <= max);
-    }
-    renderProdutos(f);
-  }
-
-  buscaEl.addEventListener('input', filtrar);
-  categoriaEl.addEventListener('change', filtrar);
-  precoEl.addEventListener('change', filtrar);
-</script>
-
+        if (produtos.length > 0 && produtos[0].nome) {
+          mensagemEl.textContent = "✅ Produtos carregados com sucesso!";
+        } else {
+          mensagemEl.textContent = "⚠️ A planilha foi lida, mas sem dados válidos.";
+        }
+      })
+      .catch(err => {
+        logDebug("❌ Erro no fetch ou parse: " + err.message);
+        mensagemEl.textContent = "❌ Erro ao carregar os produtos. Veja console/debug.";
+      });
+  </script>
 </body>
 </html>
