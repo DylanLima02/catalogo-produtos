@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Catálogo Dinâmico</title>
   <style>
-    /* Usa o mesmo estilo de antes */
     body{font-family:Arial,sans-serif;background:#f9f9f9;margin:0;padding:0}
     header{background:#333;color:#fff;padding:1rem;text-align:center}
     .filtros{display:flex;justify-content:center;gap:1rem;padding:1rem;background:#fff}
@@ -26,9 +25,7 @@
 
 <section class="filtros">
   <input id="busca" type="text" placeholder="Buscar por nome...">
-  <select id="categoria">
-    <option value="">Todas categorias</option>
-  </select>
+  <select id="categoria"><option value="">Todas categorias</option></select>
   <select id="preco">
     <option value="">Todos os preços</option>
     <option value="0-100">Até R$100</option>
@@ -41,7 +38,6 @@
 <footer>&copy; 2025 Catálogo Dinâmico</footer>
 
 <script>
-  // SUBSTITUA pelo ID da sua planilha
   const spreadsheetId = '1yJqq-aL5oUnBtxb93bJy2JwLx3ccwuaoQz_UbHAI5_s';
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json`;
 
@@ -50,16 +46,21 @@
   fetch(url)
     .then(res => res.text())
     .then(txt => {
-      const json = JSON.parse(txt.match(/gviz.*\\((.*)\\)/)[1]);
+      const json = JSON.parse(txt.match(/(?<=\().*(?=\);)/s)[0]);
       const cols = json.table.cols.map(c => c.label);
-      produtos = json.table.rows.map(r => {
-        return r.c.reduce((o, cell, i) => {
-          o[cols[i]] = cell?.v || '';
+      produtos = json.table.rows.map(r =>
+        cols.reduce((o, colName, i) => {
+          o[colName] = r.c[i]?.v || '';
           return o;
-        }, {});
-      });
+        }, {})
+      );
+      console.log('Produtos da planilha:', produtos);
       populaCategorias();
       renderProdutos(produtos);
+    })
+    .catch(err => {
+      console.error('Erro ao carregar planilha:', err);
+      document.getElementById('catalogo').innerHTML = '<p>Erro ao carregar produtos.</p>';
     });
 
   const catalogoEl = document.getElementById("catalogo");
@@ -68,8 +69,10 @@
   const precoEl = document.getElementById("preco");
 
   function populaCategorias(){
-    const cats = [...new Set(produtos.map(p=>p.categoria))];
-    cats.forEach(cat =>{
+    Array.from(categoriaEl.querySelectorAll('option'))
+      .slice(1).forEach(op => op.remove());
+    const cats = [...new Set(produtos.map(p => p.categoria))];
+    cats.forEach(cat => {
       const op = document.createElement('option');
       op.value = op.textContent = cat;
       categoriaEl.append(op);
@@ -86,8 +89,8 @@
             <p>${p.categoria}</p>
             <div class="preco">R$ ${Number(p.preco).toFixed(2)}</div>
           </a>
-        </div>
-      `).join('')
+        </div>`
+      ).join('')
       : '<p>Nenhum produto encontrado.</p>';
   }
 
@@ -95,13 +98,13 @@
     const b = buscaEl.value.toLowerCase();
     const c = categoriaEl.value;
     const pr = precoEl.value;
-    let f = produtos.filter(p=>
+    let f = produtos.filter(p =>
       p.nome.toLowerCase().includes(b) &&
-      (c===''||p.categoria===c)
+      (c === '' || p.categoria === c)
     );
     if(pr){
-      const [min,max] = pr.split('-').map(Number);
-      f = f.filter(p=>Number(p.preco)>=min && Number(p.preco)<=max);
+      const [min, max] = pr.split('-').map(Number);
+      f = f.filter(p => Number(p.preco) >= min && Number(p.preco) <= max);
     }
     renderProdutos(f);
   }
